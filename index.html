@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Watermark</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      .drop-zone {
+        border: 2px dashed #ccc;
+        padding: 150px;
+        text-align: center;
+        cursor: pointer;
+      }
+
+      .drop-zone input {
+        display: none;
+      }
+
+      .drop-zone:hover {
+        border-color: #007bff;
+      }
+
+      .selected-files {
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container mt-5">
+      <div class="drop-zone" id="dropZone">
+        <p>Drag & Drop images here or click to browse</p>
+        <input
+          type="file"
+          id="imageInput"
+          accept="image/*"
+          multiple
+          class="form-control"
+        />
+      </div>
+      <button onclick="uploadImages()" class="btn btn-primary mt-5 mb-5">
+        ดาวโหลดรูปภาพ
+      </button>
+      <div class="selected-files" id="selectedFiles"></div>
+      <canvas id="canvas" style="display: none"></canvas>
+    </div>
+
+    <!-- Bootstrap JS and Popper.js (required for Bootstrap) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      const dropZone = document.getElementById("dropZone");
+      const input = document.getElementById("imageInput");
+      const selectedFilesContainer = document.getElementById("selectedFiles");
+
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("border-primary");
+      });
+
+      dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("border-primary");
+      });
+
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("border-primary");
+
+        const files = e.dataTransfer.files;
+        input.files = files;
+
+        displaySelectedFiles(files);
+      });
+
+      input.addEventListener("change", () => {
+        displaySelectedFiles(input.files);
+      });
+
+      function displaySelectedFiles(files) {
+        selectedFilesContainer.innerHTML = "";
+        for (let i = 0; i < files.length; i++) {
+          const fileName = files[i].name;
+          const fileDiv = document.createElement("div");
+          fileDiv.textContent = fileName;
+          selectedFilesContainer.appendChild(fileDiv);
+        }
+      }
+
+      async function processImage(file, index) {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            const img = new Image();
+            img.src = e.target.result;
+
+            img.onload = function () {
+              const canvas = document.getElementById("canvas");
+              const ctx = canvas.getContext("2d");
+
+              canvas.width = img.width;
+              canvas.height = img.height;
+              ctx.drawImage(img, 0, 0, img.width, img.height);
+              const watermark = new Image();
+              watermark.src = "watermark/kky.png";
+
+              watermark.onload = function () {
+                const targetWidth = 350;
+                const targetHeight = 350;
+                ctx.globalAlpha = 0.5;
+                ctx.drawImage(
+                  watermark,
+                  20,
+                  canvas.height - targetHeight - 20,
+                  targetWidth,
+                  targetHeight
+                );
+                ctx.globalAlpha = 1;
+                resolve(canvas.toDataURL("image/png"));
+              };
+            };
+          };
+
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function uploadImages() {
+        const files = input.files;
+
+        if (files.length > 0) {
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const processedImage = await processImage(file, i);
+
+            const downloadLink = document.createElement("a");
+            downloadLink.href = processedImage;
+            downloadLink.download = `KKY_image_${i + 1}.png`;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+          }
+        }
+      }
+    </script>
+  </body>
+</html>
